@@ -202,28 +202,81 @@ class SmartReminderPlugin(Star):
         except Exception as e:
             logger.error(f"[SmartReminder] Schedule task failed: {e}")
 
-    async def _trigger_callback(self, task_data: dict):
+async def _trigger_callback(self, task_data: dict):
         """
-        任务触发时的回调：直接发送消息
+        任务触发回调：
+        1. 获取当前对话历史。
+        2. 将提醒内容作为 Prompt 传给 LLM（模拟用户此时发起了提醒请求）。
+        3. 发送 LLM 的回复。
+        4. 将 "伪造的提醒请求" 和 "LLM的回复" 一并写入历史记录，实现上下文注入。
         """
         try:
             job_id = task_data["id"]
             content = task_data["content"]
-            prefix = self.config.get("reminder_prefix", "[智能提醒]")
+            unified_msg_origin = task_data.get("unified_msg_origin")
             
-            full_content = f"{prefix} {content}"
-            logger.info(f"[SmartReminder] Triggering task {job_id}: {full_content}")
+            logger.info(f"[SmartReminder] Triggering task {job_id}: {content}")
 
-            # 修复：直接使用 context.send_message 发送消息
-            # 修改 plain 为 text 以修复报错
-            chain = MessageChain().text(full_content)
-            await self.context.send_message(task_data["unified_msg_origin"], chain)
+            # 1. 准备历史上下文
+            cm = self.context.conversation_manager
+            curr_cid = await cm.get_curr_conversation_id(unified_msg_origin)
+            
+            conversation = None
+            history = []
+            if curr_cid:
+                conversation = await cm.get_conversation(unified_msg_origin, curr_cid)
+                if conversation and conversation.history:
+                    history = json.loads(conversation.history)
+
+            # 2. 准备 LLM 调用
+            # 这里的 trigger_text 既作为 Prompt 发给 LLM，后续也会存入历史
+            # 这样 LLM 就会认为这是用户刚刚说的话，从而自然地进行回复
+            trigger_text = f"现在是提醒所指的时间，请你根据你的设定（人格/角色），给用户 {sender_name} 发送一条提醒消息。\n提醒的具体事项是：{content}\n要求：\n1. 语气要自然、符合你的人格设定。\n2. 不要只重复事项，要像和朋友或主人说话一样,自然地接入当前场景。\n3. 如果事件已经结束或已经在进行中，忽略本次提醒，继续当前场景事件。\n4. 直接输出你要说的话，不要包含'好的'、'如下'等无关内容。"
+            
+            # 获取 Provider
+            analysis_model_id = self.config.get("analysis_model_id", "")
+            provider = None
+            if analysis_model_id:
+                provider = self.context.get_provider_by_id(analysis_model_id)
+            if not provider:
+                provider = self.context.get_using_provider()
+
+            success = False
+
+            if provider:
+                try:
+                    # 调用 LLM
+                    # 此时传入的 contexts 是旧历史，prompt 是本次触发的内容
+                    response = await provider.text_chat(
+                        prompt=trigger_text,
+                        contexts=history, 
+                        session_id=None
+                    )
+                    
+                    if response and response.completion_text:
+                        reply = response.completion_text
+                        
+                        # --- 3. 仅发送 LLM 生成的回复 ---
+                        await self.context.send_message(unified_msg_origin, MessageChain().message(reply))
+                        
+                        # --- 4. 注入历史上下文 (闭环) ---
+                        if conversation:
+                            # 模拟用户消息
+                            history.append({"role": "user", "content": trigger_text})
+                            # 记录 Bot 回复
+                            history.append({"role": "assistant", "content": reply})
+                            
+                            # 保存到数据库
+                            conversation.history = json.dumps(history, ensure_ascii=False)
+                            await cm.save_conversation(conversation)
+                        
+                        success = True
+                        
+                except Exception as e:
+                    logger.warning(f"[SmartReminder] LLM generation failed: {e}")
 
             # 任务完成后移除
             self._remove_task_internal(job_id)
-
-        except Exception as e:
-            logger.error(f"[SmartReminder] Trigger callback failed: {e}")
 
     # ==========================
     # 指令处理
