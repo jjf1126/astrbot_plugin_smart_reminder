@@ -277,7 +277,9 @@ class SmartReminderPlugin(Star):
 
             # 任务完成后移除
             self._remove_task_internal(job_id)
-
+        
+        except Exception as e:
+            logger.error(f"[SmartReminder] Trigger callback failed: {e}")
     # ==========================
     # 指令处理
     # ==========================
