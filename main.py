@@ -215,6 +215,7 @@ class SmartReminderPlugin(Star):
             logger.info(f"[SmartReminder] Triggering task {job_id}: {full_content}")
 
             # 修复：直接使用 context.send_message 发送消息
+            # 修改 plain 为 text 以修复报错
             chain = MessageChain().text(full_content)
             await self.context.send_message(task_data["unified_msg_origin"], chain)
 
@@ -228,12 +229,12 @@ class SmartReminderPlugin(Star):
     # 指令处理
     # ==========================
 
-    @filter.command_group("reminder")
-    def reminder_group(self, event: AstrMessageEvent):
+    @filter.command_group("remind")
+    def remind_group(self, event: AstrMessageEvent):
         """提醒任务管理指令"""
         pass
 
-    @reminder_group.command("list")
+    @remind_group.command("list")
     async def list_tasks(self, event: AstrMessageEvent):
         """查看当前待执行的任务"""
         if not self.tasks:
@@ -255,7 +256,7 @@ class SmartReminderPlugin(Star):
         else:
             yield event.plain_result("\n".join(result))
 
-    @reminder_group.command("remove")
+    @remind_group.command("remove")
     async def remove_task(self, event: AstrMessageEvent, task_id: str):
         """删除指定ID的任务"""
         if task_id in self.tasks:
@@ -269,11 +270,11 @@ class SmartReminderPlugin(Star):
         else:
             yield event.plain_result(f"❌ 未找到 ID 为 {task_id} 的任务。")
 
-    @reminder_group.command("add")
+    @remind_group.command("add")
     async def add_task(self, event: AstrMessageEvent, time_desc: str, content: str):
         """
         手动添加任务
-        /reminder add "十分钟后" "去吃饭"
+        /remind add "十分钟后" "去吃饭"
         """
         yield event.plain_result("正在解析提醒请求...")
         
