@@ -13,6 +13,7 @@ from apscheduler.triggers.date import DateTrigger
 from astrbot.api.event import filter, AstrMessageEvent, MessageEventResult, MessageChain
 from astrbot.api.star import Context, Star, StarTools
 from astrbot.api import logger
+from astrbot.api.message_components import Plain
 
 class SmartReminderPlugin(Star):
     def __init__(self, context: Context, config: Dict):
@@ -214,9 +215,8 @@ class SmartReminderPlugin(Star):
             full_content = f"{prefix} {content}"
             logger.info(f"[SmartReminder] Triggering task {job_id}: {full_content}")
 
-            # 修复：直接使用 context.send_message 发送消息
-            # 修改 plain 为 text 以修复报错
-            chain = MessageChain().text(full_content)
+            # 修复：使用 Plain 组件构建 MessageChain
+            chain = MessageChain([Plain(full_content)])
             await self.context.send_message(task_data["unified_msg_origin"], chain)
 
             # 任务完成后移除
