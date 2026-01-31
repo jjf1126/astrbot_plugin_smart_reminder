@@ -215,7 +215,7 @@ class SmartReminderPlugin(Star):
             logger.info(f"[SmartReminder] Triggering task {job_id}: {full_content}")
 
             # 修复：直接使用 context.send_message 发送消息
-            chain = MessageChain().plain(full_content)
+            chain = MessageChain().text(full_content)
             await self.context.send_message(task_data["unified_msg_origin"], chain)
 
             # 任务完成后移除
