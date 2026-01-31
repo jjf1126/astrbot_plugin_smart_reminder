@@ -1,0 +1,47 @@
+{
+  "analysis_model_id": {
+    "description": "智能分析专用模型ID",
+    "type": "string",
+    "hint": "指定用于分析提醒任务的大模型Provider ID（例如 openai_gpt-4）。若留空，则默认复用当前会话正在使用的模型。",
+    "default": ""
+  },
+  "context_turn_count": {
+    "description": "上下文分析轮数",
+    "type": "int",
+    "hint": "每次分析时参考的最近历史对话轮数。轮数越多，Token消耗越大，但对上下文的理解越完整。",
+    "default": 10
+  },
+  "ignore_keywords": {
+    "description": "忽略分析关键词",
+    "type": "list",
+    "hint": "当用户最新发送的消息中包含列表中的任意词汇时，不进行智能提醒分析。可用于避免误触发或手动取消场景。",
+    "default": [
+      "取消",
+      "别提醒",
+      "算了",
+      "删除",
+      "移除",
+      "不要"
+    ]
+  },
+  "clean_expired_on_startup": {
+    "description": "启动时清理过期任务",
+    "type": "bool",
+    "hint": "插件启动时，是否自动检查并删除数据库中已过期但未执行的任务记录。",
+    "default": true
+  },
+  "reminder_prefix": {
+    "description": "提醒触发消息前缀",
+    "type": "string",
+    "hint": "提醒时间到达时，注入给Bot的消息前缀。Bot将收到 '{前缀} {提醒内容}' 格式的消息并进行回复。",
+    "default": "[智能提醒]"
+  },
+  "system_prompt": {
+    "description": "智能分析提示词 (System Prompt)",
+    "type": "text",
+    "hint": "指导模型提取提醒信息的系统提示词。变量 {current_time} 会被自动替换为当前时间。必须要求模型输出JSON格式。",
+    "default": "你是一个智能提醒分析助手。请分析给定的对话历史，判断用户是否表达了需要设置提醒的意图。\n\n当前时间是：{current_time}\n\n要求：\n1. 如果用户明确表达了“x分钟后提醒我”、“明天早上8点叫我”等需求，或者隐含了需要定时提醒的事项，请提取提醒时间和提醒内容。\n2. 提醒时间必须转换为标准的 'YYYY-MM-DD HH:MM:SS' 格式。\n3. 必须严格以 JSON 格式返回，不要包含Markdown标记或其他废话。\n\nJSON格式如下：\n{\n  \"should_remind\": boolean, // 是否需要提醒\n  \"remind_time\": \"string\", // 提醒时间，格式 YYYY-MM-DD HH:MM:SS\n  \"remind_content\": \"string\" // 提醒的具体内容，以第一人称描述，例如'时间到了，该出门了'\n}",
+    "editor_mode": true,
+    "editor_language": "markdown"
+  }
+}

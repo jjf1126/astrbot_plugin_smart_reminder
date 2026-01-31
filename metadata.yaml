@@ -1,0 +1,5 @@
+name: astrbot_plugin_smart_reminder
+author: AstrBot_Developer
+description: 基于对话上下文的智能提醒插件。在对话结束后自动调用指定的大模型分析最近10轮历史消息，根据自定义提示词判断是否需要设置提醒。支持实时管理提醒任务、自定义忽略关键词、启动时清理过期任务。提醒触发时将把内容作为用户消息注入，以触发Bot的主动回复处理。
+version: 1.0.0
+repo: https://github.com/YourRepo/astrbot_plugin_smart_reminder
