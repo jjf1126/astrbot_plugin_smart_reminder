@@ -202,7 +202,7 @@ class SmartReminderPlugin(Star):
         except Exception as e:
             logger.error(f"[SmartReminder] Schedule task failed: {e}")
 
-async def _trigger_callback(self, task_data: dict):
+    async def _trigger_callback(self, task_data: dict):
         """
         任务触发回调：
         1. 获取当前对话历史。
